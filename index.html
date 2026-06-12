@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>年金チェックみっけ</title>
+  <style>
+    /* ------------------------------
+       変数定義（カラー・サイズ）
+    ------------------------------ */
+    :root {
+      --primary: #2E7D32;      /* メインカラー */
+      --secondary: #81C784;    /* サブカラー */
+      --bg: #F7F9F7;           /* 背景色 */
+      --text: #333333;         /* 文字色（濃いグレー） */
+      --white: #FFFFFF;
+      --border: #CCCCCC;
+      --radius: 16px;          /* 角丸 */
+      --btn-height: 64px;      /* ボタン高さ（60px以上） */
+    }
+
+    /* ------------------------------
+       基本設定・リセット
+    ------------------------------ */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+      font-size: 20px;         /* 最低20px */
+      line-height: 1.6;
+      -webkit-text-size-adjust: 100%;
+    }
+    .container {
+      max-width: 600px;        /* スマホファースト・PCでも中央寄せで見やすく */
+      margin: 0 auto;
+      padding: 24px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .hidden {
+      display: none !important;
+    }
+
+    /* ------------------------------
+       ボタン共通スタイル
+    ------------------------------ */
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: var(--btn-height);
+      border-radius: var(--radius);
+      background-color: var(--primary);
+      color: var(--white);
+      font-size: 22px;
+      font-weight: bold;
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      margin-bottom: 16px;
+      padding: 12px;
+      transition: opacity 0.2s, transform 0.1s;
+    }
+    .btn:active {
+      opacity: 0.8;
+      transform: scale(0.98);
+    }
+    .btn-outline {
+      background-color: var(--white);
+      color: var(--primary);
+      border: 3px solid var(--primary);
+    }
+    .btn-sub {
+      background-color: var(--secondary);
+      color: #000;
+    }
+
+    /* ------------------------------
+       スタート画面
+    ------------------------------ */
+    #start-screen {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding-bottom: 40px;
+    }
+    h1 {
+      color: var(--primary);
+      font-size: 36px;
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+    .subtitle {
+      font-size: 22px;
+      font-weight: bold;
+      color: #555;
+      margin-bottom: 48px;
+    }
+    .illustration {
+      font-size: 80px;
+      margin-bottom: 32px;
+    }
+
+    /* ------------------------------
+       質問画面
+    ------------------------------ */
+    #question-screen {
+      flex-grow: 1;
+      padding-bottom: 100px; /* 下部ナビゲーションの余白 */
+    }
+    .progress-text {
+      font-size: 22px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 8px;
+      color: var(--primary);
+    }
+    .progress-bar-container {
+      background-color: #E0E0E0;
+      border-radius: 10px;
+      height: 12px;
+      width: 100%;
+      margin-bottom: 32px;
+      overflow: hidden;
+    }
+    .progress-bar {
+      background-color: var(--primary);
+      height: 100%;
+      width: 0%;
+      transition: width 0.4s ease;
+    }
+    .question-text {
+      font-size: 28px;
+      font-weight: bold;
+      margin-bottom: 32px;
+      line-height: 1.4;
+    }
+    .options-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .option-label {
+      display: flex;
+      align-items: center;
+      background-color: var(--white);
+      border: 3px solid var(--border);
+      border-radius: var(--radius);
+      min-height: 80px;
+      padding: 16px 24px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .option-label input[type="radio"] {
+      width: 28px;
+      height: 28px;
+      margin-right: 20px;
+      accent-color: var(--primary);
+      flex-shrink: 0;
+    }
+    .option-text {
+      font-size: 24px;
+      font-weight: bold;
+    }
+    /* 選択時のハイライト（古いスマホも考慮してクラスで制御） */
+    .option-label.selected {
+      border-color: var(--primary);
+      background-color: #E8F5E9;
+    }
+    .error-message {
+      color: #D32F2F;
+      font-weight: bold;
+      font-size: 20px;
+      margin-top: 24px;
+      text-align: center;
+      background-color: #FFEBEE;
+      padding: 16px;
+      border-radius: 8px;
+    }
+
+    /* 下部ナビゲーション */
+    #bottom-nav {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background-color: var(--white);
+      padding: 16px 24px;
+      box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+      z-index: 10;
+      display: flex;
+      justify-content: center;
+    }
+    .nav-container {
+      max-width: 600px;
+      width: 100%;
+      display: flex;
+      gap: 16px;
+    }
+    .nav-container .btn {
+      margin-bottom: 0;
+      flex: 1;
+    }
+
+    /* ------------------------------
+       結果画面
+    ------------------------------ */
+    #result-screen {
+      padding-bottom: 60px;
+    }
+    .result-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .result-header h2 {
+      font-size: 32px;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+    
+    .result-section {
+      margin-bottom: 40px;
+    }
+    .result-title {
+      font-size: 24px;
+      font-weight: bold;
+      border-bottom: 4px solid var(--primary);
+      padding-bottom: 8px;
+      margin-bottom: 20px;
+    }
+    .result-card {
+      background-color: var(--white);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      border-left: 10px solid var(--primary);
+    }
+    /* 可能性ごとの色分け */
+    .result-card.high { border-left-color: var(--primary); }
+    .result-card.possible { border-left-color: #FBC02D; }
+    .result-card.none { 
+      border-left-color: #9E9E9E;
+      background-color: #F5F5F5;
+    }
+    
+    .card-title {
+      font-size: 26px;
+      font-weight: bold;
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+    .result-card.high .card-title { color: var(--primary); }
+    .result-card.possible .card-title { color: #F57F17; }
+    .result-card.none .card-title { color: #616161; }
+    
+    .card-desc {
+      font-size: 20px;
+      margin-bottom: 16px;
+      color: #444;
+    }
+    .card-condition {
+      background-color: var(--bg);
+      padding: 16px;
+      border-radius: 8px;
+      font-size: 18px;
+      color: #555;
+      font-weight: bold;
+    }
+
+    /* CTAエリア */
+    .cta-box {
+      background-color: #E8F5E9;
+      padding: 32px 24px;
+      border-radius: var(--radius);
+      text-align: center;
+      margin-bottom: 40px;
+      border: 2px solid var(--primary);
+    }
+    .cta-box p {
+      font-size: 24px;
+      font-weight: bold;
+      color: var(--primary);
+      margin-top: 0;
+      margin-bottom: 24px;
+    }
+
+    /* アクションボタン */
+    .action-buttons {
+      margin-bottom: 40px;
+    }
+    .btn-line {
+      background-color: #06C755;
+      color: var(--white);
+    }
+    .btn-line:hover { background-color: #05B34C; }
+
+    /* ------------------------------
+       印刷用スタイル
+    ------------------------------ */
+    @media print {
+      body {
+        background-color: white;
+        color: black;
+      }
+      .container { padding: 0; max-width: 100%; }
+      #bottom-nav, .action-buttons, .cta-box .btn, #restart-btn {
+        display: none !important;
+      }
+      .result-card {
+        box-shadow: none;
+        border: 2px solid #ccc;
+        page-break-inside: avoid;
+      }
+      .cta-box {
+        border: 2px solid #ccc;
+        background-color: white;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  
+  <!-- ===================================
+       スタート画面
+  ==================================== -->
+  <div id="start-screen">
+    <div class="illustration">🔎</div>
+    <h1>年金チェックみっけ</h1>
+    <p class="subtitle">質問に答えるだけで、<br>もらえる可能性のある<br>年金制度をチェック</p>
+    <button id="start-btn" class="btn">診断をはじめる</button>
+  </div>
+
+  <!-- ===================================
+       質問画面
+  ==================================== -->
+  <div id="question-screen" class="hidden">
+    <div class="progress-text">質問 <span id="current-q-num">1</span> / 8</div>
+    <div class="progress-bar-container">
+      <div id="progress-bar" class="progress-bar"></div>
+    </div>
+    
+    <h2 id="question-text" class="question-text">質問文が入ります</h2>
+    
+    <div id="options-container" class="options-container">
+      <!-- 選択肢がJavaScriptで生成されます -->
+    </div>
+    
+    <div id="error-message" class="error-message hidden">
+      ※選択肢を1つ選んでください
+    </div>
+  </div>
+
+  <!-- ===================================
+       結果画面
+  ==================================== -->
+  <div id="result-screen" class="hidden">
+    <div class="result-header">
+      <h2>診断結果</h2>
+      <p>あなたの回答から導き出された結果です</p>
+    </div>
+
+    <div id="result-container">
+      <!-- 診断結果カードがJavaScriptで生成されます -->
+    </div>
+    
+    <div class="cta-box">
+      <p>＼ 詳しくは年金事務所へご確認ください ／</p>
+      <a href="https://www.nenkin.go.jp/n_net/" target="_blank" class="btn" rel="noopener">ねんきんネットを開く</a>
+      <a href="https://www.nenkin.go.jp/section/soudan/" target="_blank" class="btn btn-outline" rel="noopener">年金事務所を探す</a>
+    </div>
+
+    <div class="action-buttons">
+      <button id="print-btn" class="btn btn-sub">結果を印刷・PDFで保存する</button>
+      <button id="line-btn" class="btn btn-line">家族へLINEで共有する</button>
+    </div>
+    
+    <button id="restart-btn" class="btn btn-outline">最初からやり直す</button>
+  </div>
+
+</div>
+
+<!-- ===================================
+     下部ナビゲーション (質問画面用)
+==================================== -->
+<div id="bottom-nav" class="hidden">
+  <div class="nav-container">
+    <button id="prev-btn" class="btn btn-outline">戻る</button>
+    <button id="next-btn" class="btn">次へ</button>
+  </div>
+</div>
+
+<script>
+  /* ------------------------------
+     質問データ定義
+  ------------------------------ */
+  const questions = [
+    { id: 'q1', text: 'あなたの年齢は？', options: [
+      { value: '60-64', label: '60〜64歳' },
+      { value: '65-69', label: '65〜69歳' },
+      { value: '70-74', label: '70〜74歳' },
+      { value: '75-79', label: '75〜79歳' },
+      { value: '80+', label: '80歳以上' }
+    ]},
+    { id: 'q2', text: '配偶者（夫・妻）はいますか？', options: [
+      { value: 'yes', label: 'はい' },
+      { value: 'no', label: 'いいえ' }
+    ]},
+    { id: 'q3', text: '配偶者の年齢は？', options: [
+      { value: '<65', label: '65歳未満' },
+      { value: '65-69', label: '65〜69歳' },
+      { value: '70+', label: '70歳以上' },
+      { value: 'none', label: '該当なし' }
+    ]},
+    { id: 'q4', text: '会社員または公務員として働いた期間は？', options: [
+      { value: '<20', label: '20年未満' },
+      { value: '>=20', label: '20年以上' },
+      { value: 'unknown', label: 'わからない' }
+    ]},
+    { id: 'q5', text: '現在受け取っている年金は？', options: [
+      { value: 'koku', label: '国民年金のみ' },
+      { value: 'kousei', label: '厚生年金＋国民年金' },
+      { value: 'unknown', label: 'わからない' }
+    ]},
+    { id: 'q6', text: '住民税は？', options: [
+      { value: 'tax', label: '課税' },
+      { value: 'no-tax', label: '非課税' },
+      { value: 'unknown', label: 'わからない' }
+    ]},
+    { id: 'q7', text: '年金通知書に「加給年金」という文字がありますか？', options: [
+      { value: 'yes', label: 'ある' },
+      { value: 'no', label: 'ない' },
+      { value: 'unknown', label: 'わからない' }
+    ]},
+    { id: 'q8', text: '年金通知書に「振替加算」という文字がありますか？', options: [
+      { value: 'yes', label: 'ある' },
+      { value: 'no', label: 'ない' },
+      { value: 'unknown', label: 'わからない' }
+    ]}
+  ];
+
+  /* ------------------------------
+     状態管理変数
+  ------------------------------ */
+  let currentStep = 0;
+  let answers = {};
+
+  /* ------------------------------
+     DOM要素の取得
+  ------------------------------ */
+  const startScreen = document.getElementById('start-screen');
+  const questionScreen = document.getElementById('question-screen');
+  const resultScreen = document.getElementById('result-screen');
+  const bottomNav = document.getElementById('bottom-nav');
+  const errorMessage = document.getElementById('error-message');
+  
+  const questionText = document.getElementById('question-text');
+  const optionsContainer = document.getElementById('options-container');
+  const currentQNum = document.getElementById('current-q-num');
+  const progressBar = document.getElementById('progress-bar');
+  
+  const startBtn = document.getElementById('start-btn');
+  const prevBtn = document.getElementById('prev-btn');
+  const nextBtn = document.getElementById('next-btn');
+  const restartBtn = document.getElementById('restart-btn');
+  const printBtn = document.getElementById('print-btn');
+  const lineBtn = document.getElementById('line-btn');
+
+  /* ------------------------------
+     初期化・イベントリスナー設定
+  ------------------------------ */
+  startBtn.addEventListener('click', () => {
+    currentStep = 0;
+    answers = {};
+    renderStep();
+  });
+
+  nextBtn.addEventListener('click', handleNext);
+  prevBtn.addEventListener('click', handlePrev);
+  restartBtn.addEventListener('click', () => {
+    startScreen.classList.remove('hidden');
+    resultScreen.classList.add('hidden');
+    window.scrollTo(0, 0);
+  });
+
+  printBtn.addEventListener('click', () => window.print());
+  
+  lineBtn.addEventListener('click', () => {
+    const text = encodeURIComponent('【年金チェックみっけ】\nもらえる可能性のある年金を簡単に診断しました！\nあなたもチェックしてみませんか？\n' + window.location.href);
+    window.open('https://line.me/R/msg/text/?' + text, '_blank');
+  });
+
+  /* ------------------------------
+     画面描画処理
+  ------------------------------ */
+  function renderStep() {
+    // 最終質問を終えたら結果画面へ
+    if (currentStep >= questions.length) {
+      renderResult();
+      return;
+    }
+
+    const q = questions[currentStep];
+    const qNumber = parseInt(q.id.replace('q', ''));
+    
+    // 進捗表示の更新
+    currentQNum.textContent = qNumber;
+    progressBar.style.width = `${(qNumber / questions.length) * 100}%`;
+    
+    // 質問と選択肢の描画
+    questionText.textContent = q.text;
+    renderOptions(q.options, answers[q.id]);
+    
+    // 戻るボタンのラベル調整
+    prevBtn.textContent = currentStep === 0 ? '最初に戻る' : '戻る';
+    
+    // エラーメッセージを隠す
+    errorMessage.classList.add('hidden');
+
+    // 画面切り替え
+    startScreen.classList.add('hidden');
+    questionScreen.classList.remove('hidden');
+    resultScreen.classList.add('hidden');
+    bottomNav.classList.remove('hidden');
+
+    // スクロールを一番上に
+    window.scrollTo(0, 0);
+  }
+
+  function renderOptions(options, currentAnswer) {
+    optionsContainer.innerHTML = '';
+    
+    options.forEach(opt => {
+      const label = document.createElement('label');
+      label.className = 'option-label';
+      if (currentAnswer === opt.value) {
+        label.classList.add('selected');
+      }
+      
+      const input = document.createElement('input');
+      input.type = 'radio';
+      input.name = 'option';
+      input.value = opt.value;
+      if (currentAnswer === opt.value) {
+        input.checked = true;
+      }
+      
+      // 選択時のクラス切り替えとエラー非表示
+      input.addEventListener('change', () => {
+        document.querySelectorAll('.option-label').forEach(el => el.classList.remove('selected'));
+        label.classList.add('selected');
+        errorMessage.classList.add('hidden');
+      });
+
+      const span = document.createElement('span');
+      span.className = 'option-text';
+      span.textContent = opt.label;
+
+      label.appendChild(input);
+      label.appendChild(span);
+      optionsContainer.appendChild(label);
+    });
+  }
+
+  /* ------------------------------
+     次へ・戻るの制御
+  ------------------------------ */
+  function handleNext() {
+    const selected = document.querySelector('input[name="option"]:checked');
+    if (!selected) {
+      errorMessage.classList.remove('hidden');
+      return;
+    }
+    
+    // 回答を保存
+    answers[questions[currentStep].id] = selected.value;
+    
+    // スキップロジック：配偶者が「いない」場合はQ3(配偶者の年齢)を「該当なし」としてスキップ
+    if (currentStep === 1 && selected.value === 'no') {
+      answers['q3'] = 'none';
+      currentStep += 2; // Q4へ飛ぶ
+    } else {
+      currentStep++;
+    }
+    
+    renderStep();
+  }
+
+  function handlePrev() {
+    errorMessage.classList.add('hidden');
+    
+    if (currentStep === 0) {
+      // スタート画面に戻る
+      startScreen.classList.remove('hidden');
+      questionScreen.classList.add('hidden');
+      bottomNav.classList.add('hidden');
+      return;
+    }
+    
+    // スキップロジックの逆：Q4から戻る時、配偶者なしならQ2へ戻る
+    if (currentStep === 3 && answers['q2'] === 'no') {
+      currentStep -= 2;
+    } else {
+      currentStep--;
+    }
+    
+    renderStep();
+  }
+
+  /* ------------------------------
+     診断結果の判定と描画
+  ------------------------------ */
+  function renderResult() {
+    questionScreen.classList.add('hidden');
+    bottomNav.classList.add('hidden');
+    resultScreen.classList.remove('hidden');
+    window.scrollTo(0, 0);
+
+    // 条件判定用変数
+    const isOver65 = ['65-69', '70-74', '75-79', '80+'].includes(answers.q1);
+    const spouseUnder65 = answers.q3 === '<65';
+    const spouseOver65 = ['65-69', '70+'].includes(answers.q3);
+    const workOver20 = answers.q4 === '>=20';
+    const isTaxFree = answers.q6 === 'no-tax';
+
+    // 判定ロジック: high(可能性が高い), possible(可能性がある/わからない), none(対象外)
+    
+    // ① 加給年金
+    const getKakyuStatus = () => {
+      if (answers.q7 === 'yes') return 'high'; // 通知書に記載あり
+      if (isOver65 && spouseUnder65 && workOver20) return 'high'; // 条件フル合致
+      if (answers.q7 === 'no') return 'none'; // 通知書に記載なし
+      if (answers.q1 === '60-64' || answers.q3 === '65-69' || answers.q3 === '70+' || answers.q3 === 'none' || answers.q4 === '<20') return 'none'; // 確定で外れる条件あり
+      return 'possible'; // 「わからない」が含まれる
+    };
+
+    // ② 振替加算
+    const getFurikaeStatus = () => {
+      if (answers.q8 === 'yes') return 'high';
+      if (spouseOver65) return 'high';
+      if (answers.q8 === 'no') return 'none';
+      if (answers.q3 === '<65' || answers.q3 === 'none') return 'none';
+      return 'possible';
+    };
+
+    // ③ 年金生活者支援給付金
+    const getKyufukinStatus = () => {
+      if (isTaxFree) return 'high';
+      if (answers.q6 === 'tax') return 'none';
+      return 'possible';
+    };
+
+    // 制度リスト
+    const systems = [
+      {
+        title: '加給年金',
+        desc: '厚生年金に20年以上加入している方が65歳になったとき、65歳未満の配偶者がいる場合に上乗せされる年金です。（年金の家族手当のような制度です）',
+        condition: '主な条件：ご本人が65歳以上、配偶者が65歳未満、厚生年金に20年以上加入',
+        status: getKakyuStatus()
+      },
+      {
+        title: '振替加算',
+        desc: '加給年金の対象となっていた配偶者が65歳になり、ご自身の老齢基礎年金を受け取るようになった際に上乗せされる年金です。',
+        condition: '主な条件：配偶者が65歳以上',
+        status: getFurikaeStatus()
+      },
+      {
+        title: '年金生活者支援給付金',
+        desc: '公的年金等の収入やその他の所得が一定基準以下の年金受給者の生活を支援するための給付金です。',
+        condition: '主な条件：住民税が非課税であること',
+        status: getKyufukinStatus()
+      }
+    ];
+
+    // 結果を分類
+    const highList = systems.filter(s => s.status === 'high');
+    const possibleList = systems.filter(s => s.status === 'possible');
+    const noneList = systems.filter(s => s.status === 'none');
+
+    let html = '';
+
+    if (highList.length > 0) {
+      html += `
+        <div class="result-section">
+          <div class="result-title" style="color: var(--primary);">可能性が高い制度</div>
+          ${highList.map(s => createCardHtml(s, 'high')).join('')}
+        </div>
+      `;
+    }
+
+    if (possibleList.length > 0) {
+      html += `
+        <div class="result-section">
+          <div class="result-title" style="color: #F57F17; border-color: #FBC02D;">可能性がある制度（要確認）</div>
+          ${possibleList.map(s => createCardHtml(s, 'possible')).join('')}
+        </div>
+      `;
+    }
+
+    if (noneList.length > 0) {
+      html += `
+        <div class="result-section">
+          <div class="result-title" style="color: #616161; border-color: #9E9E9E;">対象外と思われる制度</div>
+          ${noneList.map(s => createCardHtml(s, 'none')).join('')}
+        </div>
+      `;
+    }
+
+    document.getElementById('result-container').innerHTML = html;
+  }
+
+  // カードHTML生成ヘルパー
+  function createCardHtml(system, type) {
+    return `
+      <div class="result-card ${type}">
+        <h3 class="card-title">${system.title}</h3>
+        <p class="card-desc">${system.desc}</p>
+        <div class="card-condition">✅ ${system.condition}</div>
+      </div>
+    `;
+  }
+</script>
+
+</body>
+</html>
